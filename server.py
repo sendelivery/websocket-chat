@@ -18,12 +18,14 @@ async def chat(websocket: WebSocketServerProtocol, room: Room):
         event = json.loads(message)
         assert event["type"] == "chat"
 
+        print("received", event["message"])
+
         websockets.broadcast(room.connected, message)
 
 
 async def join(websocket: WebSocketServerProtocol, roomid: str) -> Room:
     # If our room already exists, we'll add our new user to its set of connections.
-    # Otherwise, we'll create
+    # Otherwise, we'll create one.
     if roomid in EXISTING_ROOMS:
         room = EXISTING_ROOMS[roomid]
     else:
@@ -33,14 +35,10 @@ async def join(websocket: WebSocketServerProtocol, roomid: str) -> Room:
     room.connect(websocket)
     event = {
         "type": "server_msg",
-        "message": f"Joined {roomid} - {len(room.connected)} user(s) online.",
+        "message": f"Joined {roomid} - {len(room.connected) - 1} other user(s) online.",
     }
     await websocket.send(json.dumps(event))
-
-    try:
-        await chat(websocket, room)
-    finally:
-        room.disconnect(websocket)
+    return room
 
 
 async def handler(websocket: WebSocketServerProtocol):
@@ -54,8 +52,13 @@ async def handler(websocket: WebSocketServerProtocol):
 
     if "roomid" in event:
         room = await join(websocket, event["roomid"])
+        await chat(websocket, room)
     else:
         raise NotImplementedError("Unable to join random room at this time.")
+
+    # When the client disconnects, either by terminating their end of the connection or by sending
+    # a "leave" message, we'll remove their connection from the room.
+    room.disconnect(websocket)
 
 
 async def main():

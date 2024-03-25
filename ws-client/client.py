@@ -1,36 +1,34 @@
 #!/usr/bin/env python
 
 import asyncio
-import sys
 import websockets
 from websockets import WebSocketClientProtocol
 import json
+import sys
 
 
-async def ainput(string: str) -> str:
-    await asyncio.to_thread(sys.stdout.write, f"{string} ")
-    return await asyncio.to_thread(sys.stdin.readline)
-
-
-async def send_message(websocket: WebSocketClientProtocol):
-    msg = await ainput(">>>")
-    while msg != "dc":
-        event = {"type": "chat", "message": msg}
-        asyncio.create_task(websocket.send(json.dumps(event)))
-        msg = await ainput(">>>")
-
-
-async def chat(websocket: WebSocketClientProtocol):
-    asyncio.create_task(send_message(websocket))
-    print("now receiving...")
+async def receive_messages(websocket: WebSocketClientProtocol) -> None:
     async for message in websocket:
         event = json.loads(message)
-
         assert event["type"] == "chat"
         print(event["message"])
 
 
-async def join_room():
+async def send_message(websocket: WebSocketClientProtocol) -> None:
+    while True:
+        msg = await asyncio.to_thread(sys.stdin.readline)
+        event = {"type": "chat", "message": msg}
+        await websocket.send(json.dumps(event))
+
+
+async def chat(websocket: WebSocketClientProtocol):
+    await asyncio.gather(
+        send_message(websocket),
+        receive_messages(websocket),
+    )
+
+
+async def main():
     uri = "ws://localhost:8001"
     async with websockets.connect(uri) as websocket:
         event = {"type": "join"}
@@ -46,9 +44,5 @@ async def join_room():
         await chat(websocket)
 
 
-async def handler():
-    await join_room()
-
-
 if __name__ == "__main__":
-    asyncio.run(handler())
+    asyncio.run(main())

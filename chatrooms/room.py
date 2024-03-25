@@ -10,7 +10,6 @@ class Room:
     def __init__(self, roomid: str) -> None:
         self.roomid = roomid
         self.connected: Set[WebSocketServerProtocol] = set()
-        self.pas.... = []
 
     def connect(self, websocket: WebSocketServerProtocol) -> bool:
         if websocket in self.connected:
@@ -29,6 +28,3 @@ class Room:
 
         print(id(websocket), "is not in", self.roomid)
         return False
-
-    def get_past_messages(self):
-        return self.past_messages

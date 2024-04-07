@@ -1,13 +1,13 @@
+import _curses
 import curses
 import curses.textpad
-import _curses
-import signal
-
 import os
-from io import TextIOWrapper
-from random_sentences import sentences
+import signal
+from typing import Optional
+from types import FrameType
 
-import typing
+
+from io import TextIOWrapper
 
 
 def clamp(n: int, smallest: int, largest: int) -> int:
@@ -15,15 +15,25 @@ def clamp(n: int, smallest: int, largest: int) -> int:
 
 
 class TerminalDisplay:
+    class _InputBox:
+        def __init__(
+            self, textbox: curses.textpad.Textbox, width: int, height: int
+        ) -> None:
+            self.textbox = textbox
+            self.width = width
+            self.height = height
+
     def __init__(self, stdscr: "_curses._CursesWindow", file: TextIOWrapper) -> None:
-        self.debug_file = file
-        self.debug = True
-        self.__log__(f"Initialised terminal display - {id(self)}")
-        # self.debug = False
+        self._log_file = file
+        self._debug_mode = True
+
+        self._set_resize_signal()
+        self._log(f"Set SIGWINCH handler - {id(self)}")
 
         self.screen = stdscr
         self.finished = False
 
+        # Colours used for debug purposes - find a better place for them.
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)
         self.BLACK_ON_GREEN = curses.color_pair(1)
         curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -33,126 +43,137 @@ class TerminalDisplay:
         curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_MAGENTA)
         self.WHITE_ON_MAGENTA = curses.color_pair(4)
 
-        self.pad_scroll = 0
+        self._log(f"Initialised terminal display - {id(self)}")
 
-    def __log__(self, message: str) -> None:
-        if self.debug:
-            self.debug_file.write(f"{message}\n")
-            self.debug_file.flush()
+    def _log(self, message: str) -> None:
+        if self._debug_mode:
+            self._log_file.write(f"{message}\n")
+            self._log_file.flush()
 
-    def draw_display(self, y: int = None, x: int = None) -> None:
-        if y and x:
-            curses.resizeterm(y, x)
+    def _set_resize_signal(self) -> None:
+        def sig_handler(signal: int, frame: Optional[FrameType]) -> None:
+            rows, columns = os.popen("stty size", "r").read().split()
+
+            self._log(f"Terminal size changed to {rows} rows and {columns} columns.\n")
+            self._draw_display(int(rows), int(columns))
+
+        signal.signal(signal.SIGWINCH, sig_handler)
+
+    def _draw_display(
+        self, term_height: Optional[int] = None, term_width: Optional[int] = None
+    ) -> None:
+        """Draws the terminal display in response to SIGWINCH signals or upon initialisation. The
+        current state of the user interface, e.g. messages in the chat log and message in edit are
+        cleared and restored upon ending the drawing process.
+
+        Args:
+            term_height (Optional[int]): Window height. Passed in by the SIGWINCH handler when the
+            terminal size updates.
+            term_width (Optional[int]): Window width. Passed in by the SIGWINCH handler when the
+            terminal size updates.
+        """
+
+        # Update the internal terminal size if arguments are explicitly passed in.
+        if term_height and term_width:
+            curses.resizeterm(term_height, term_width)
+
         # Update the instance variables holding our terminal window's size
         self.height, self.width = self.screen.getmaxyx()
 
-        # Draw a rectangle along the border of the terminal window
-        # and welcome message along the bottom.
         self.screen.clear()
+
+        self._draw_screen_border()
+        self._draw_program_instructions()
+
+        self.screen.refresh()
+
+        self.input_box = self._draw_input_area()
+        self._draw_chatlog_area()
+
+    def _draw_screen_border(self) -> None:
         curses.textpad.rectangle(
             self.screen, uly=0, ulx=0, lry=self.height - 2, lrx=self.width - 1
         )
+
+    def _draw_program_instructions(self) -> None:
         self.screen.addstr(
             self.height - 1,
             0,
             "f1: debug, esc: quit",
             self.GREEN_ON_BLACK,
         )
-        self.screen.refresh()
 
-        # Create a new window which will hold our input textbox
-        input_height = clamp(self.height // 5, 3, 8)
+    def _draw_input_area(self) -> _InputBox:
+        """A window with a textpad for typing in messages.
+
+        Returns:
+            _InputBox: An object for interacting with the created input box.
+        """
+        input_height = clamp(self.height // 5, 1, 8)
         input_width = self.width - 2
         begin_y = self.height - input_height - 2
         begin_x = 1
-        self.input_window = curses.newwin(input_height, input_width, begin_y, begin_x)
-        self.input_window.clear()
 
-        # TEXTPAD FOR INPUT WINDOW
-        self.box = curses.textpad.Textbox(self.input_window)
+        input_window = curses.newwin(input_height, input_width, begin_y, begin_x)
+        input_window.clear()
 
-        if self.debug:
-            self.input_window.bkgd(self.WHITE_ON_MAGENTA)
+        textbox = curses.textpad.Textbox(input_window)
 
-        self.input_window.refresh()
+        if self._debug_mode:
+            input_window.bkgd(self.WHITE_ON_MAGENTA)
 
-        # Create a window and pad for displaying last 100 messages in chat log
-        self.chat_log_height = self.height - (input_height + 2)
+        input_window.refresh()
 
-        self.chat_log_window = curses.newwin(self.chat_log_height, self.width, 0, 0)
-        self.chat_log_window.box()
+        return self._InputBox(textbox, input_width, input_height)
 
-        if self.debug:
-            self.chat_log_window.bkgd(self.BLACK_ON_GREEN)
-        self.chat_log_window.refresh()
+    def _draw_chatlog_area(self) -> None:
+        """A window with a pad that displays the last 100 messages in the chat log."""
+        chat_log_height = self.height - (self.input_box.height + 2)
+
+        chat_log_window = curses.newwin(chat_log_height, self.width, 0, 0)
+        chat_log_window.box()
+
+        if self._debug_mode:
+            chat_log_window.bkgd(self.BLACK_ON_GREEN)
+
+        chat_log_window.refresh()
 
         max_pad_width = self.width - 2
-        self.chat_log_pad = curses.newpad(100, max_pad_width)
-        if self.debug:
-            self.chat_log_pad.bkgd(self.BLUE_ON_YELLOW)
-        self.chat_log_pad.addstr("Hello this is the first message!\n")
-        self.chat_log_pad.refresh(
-            0, 0, self.chat_log_height - 2, 1, self.chat_log_height - 2, max_pad_width
-        )
+        chat_log_pad = curses.newpad(100, max_pad_width)
 
-        # position cursor
-        self.screen.move(self.chat_log_height, 1)
+        if self._debug_mode:
+            chat_log_pad.bkgd(self.BLUE_ON_YELLOW)
 
-    def add_message_to_chat_log(self, message: str) -> None:
-        # Add message to pad
-        self.chat_log_pad.addstr(f"{message}\n")
-        # Scroll pad
-        self.pad_scroll += 1
-        self.chat_log_pad.refresh(
-            0,
-            0,
-            self.chat_log_height - self.pad_scroll,
-            1,
-            self.chat_log_height,
-            self.width - 2,
-        )
+        chat_log_pad.addstr("Hello this is the first message!\n")
+
+        pminrow = 0
+        pmincol = 0
+        sminrow = chat_log_height - 2
+        smincol = 1
+        smaxrow = chat_log_height - 2
+        smaxcol = max_pad_width
+
+        chat_log_pad.refresh(pminrow, pmincol, sminrow, smincol, smaxrow, smaxcol)
 
     def run(self) -> None:
-        self.draw_display()  # Draw the display upon initial run
+        # Draw the display upon initial run
+        self._draw_display()
 
-        self.box.edit()
-        msg = self.box.gather()
+        self.input_box.textbox.edit()
+        msg = self.input_box.textbox.gather()
 
-        self.__log__(f"user typed: {msg}")
-
-        # curses.echo()  # echo keys
-        # while not self.finished:
-        #     char = self.screen.getch()
-
-        #     self.__log__(f"char: {char}")
-
-        #     # if char == curses.KEY_RESIZE:
-        #     #     self.draw_display()
-        #     if char == 27:  # esc - quit
-        #         self.finished = True
-        #     elif char == 265:  # f1 - enable debug
-        #         self.debug = not self.debug
-        #         self.draw_display()
+        self._log(f"User typed: {msg}")
 
 
-def program(stdscr: "_curses._CursesWindow") -> None:
+def main(stdscr: "_curses._CursesWindow") -> None:
     dir_path = os.path.dirname(os.path.realpath(__file__))
     with open(f"{dir_path}/debug.txt", mode="w+") as file:
         display = TerminalDisplay(stdscr, file)
-
-        def sighandler(signal, frame):
-            rows, columns = os.popen("stty size", "r").read().split()
-            file.write(f"Terminal size changed to {rows} rows and {columns} columns.\n")
-            file.flush()
-            display.draw_display(int(rows), int(columns))
-
-        signal.signal(signal.SIGWINCH, sighandler)
-
         display.run()
 
 
 if __name__ == "__main__":
-    os.environ["ESCDELAY"] = (
-        "25"  # remove default esc delay that comes with the wrapper
-    )
-    curses.wrapper(program)
+    # remove default esc delay that comes with the wrapper
+    os.environ["ESCDELAY"] = "25"
+
+    curses.wrapper(main)

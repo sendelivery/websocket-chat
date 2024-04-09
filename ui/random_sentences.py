@@ -50,3 +50,31 @@ sentences = [
     "He had unknowingly taken up sleepwalking as a nighttime hobby.",
     "The child's favorite Christmas gift was the large box her father's lawnmower came in.",
 ]
+
+
+def generate_sentences():
+    for sentence in sentences:
+        yield sentence
+
+
+def generate_users():
+    users = [
+        "Sbstn",
+        "L-E-Ut",
+        "Chak",
+        "Mat",
+        "Sbstn",
+        "L-E-Ut",
+        "Chak",
+        "Mat",
+        "Sbstn",
+        "L-E-Ut",
+        "Chak",
+        "Mat",
+        "Sbstn",
+        "L-E-Ut",
+        "Chak",
+        "Mat",
+    ]
+    for user in users:
+        yield user

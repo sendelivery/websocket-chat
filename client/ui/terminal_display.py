@@ -8,9 +8,8 @@ from typing import Optional, List
 from types import FrameType
 
 import asyncio
-import websockets
-from websockets import WebSocketClientProtocol
-import json
+
+from ..client import Client
 
 def clamp(n: int, smallest: int, largest: int) -> int:
     return max(smallest, min(largest, n))
@@ -90,15 +89,22 @@ class TerminalDisplay:
                 self.draw_message(user, message)
 
     def __init__(
-        self, stdscr: "_curses._CursesWindow", log_file: Optional[TextIOWrapper] = None
+        self,
+        stdscr: "_curses._CursesWindow",
+        client: Client,
+        log_file: Optional[TextIOWrapper] = None,
     ) -> None:
         self._log_file = log_file
         self._debug_mode = False
+
+        self.client = client
 
         self._set_resize_signal()
         self._log("Set SIGWINCH handler")
 
         self.screen = stdscr
+        curses.curs_set(0)
+
         self.finished = False
 
         self.chatlog = self._Chatlog(log_file)
@@ -243,30 +249,35 @@ class TerminalDisplay:
 
         self.chatlog.draw()
 
-    async def receive_messages(self, websocket: WebSocketClientProtocol) -> None:
-        async for message in websocket:
-            event = json.loads(message)
-            assert event["type"] == "chat"
-
-            self.chatlog.add_message("someone", event["message"])
-
-    async def send_message(self, websocket: WebSocketClientProtocol, msg: str) -> None:
-        event = {"type": "chat", "message": msg}
-        await websocket.send(json.dumps(event))
-
-    async def run(self, websocket: WebSocketClientProtocol) -> None:
-        # Draw the display upon initial run
-        self._draw_display()
-
+    async def control(self) -> None:
         self.screen.nodelay(True)
         while not self.finished:
             char = self.screen.getch()
             if char == ord("c"):
                 message = await asyncio.to_thread(self.input_box.edit)
-                await self.send_message(websocket, message)
-                self.chatlog.add_message("you", message)
+                await self.client.send_message(message)
+                self.chatlog.add_message(self.client, message)
             elif char == ord("q"):
                 self.screen.clear()
                 self.screen.refresh()
                 self.finished = True
             await asyncio.sleep(0)
+
+    async def receive_messages(self) -> None:
+        def callback(message: str) -> None:
+            self.chatlog.add_message("someone", message)
+
+        await self.client.receive_messages(callback)
+
+    async def run(self) -> None:
+        # Draw the display upon initial run
+        self._draw_display()
+
+        tasks = (
+            asyncio.create_task(self.control()),
+            asyncio.create_task(self.receive_messages()),
+        )
+        await asyncio.wait(
+            tasks,
+            return_when=asyncio.FIRST_COMPLETED,
+        )

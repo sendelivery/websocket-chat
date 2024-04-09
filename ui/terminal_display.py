@@ -7,8 +7,10 @@ import signal
 from typing import Optional, List
 from types import FrameType
 
-from random_sentences import generate_sentences, generate_users
-
+import asyncio
+import websockets
+from websockets import WebSocketClientProtocol
+import json
 
 def clamp(n: int, smallest: int, largest: int) -> int:
     return max(smallest, min(largest, n))
@@ -40,14 +42,12 @@ class TerminalDisplay:
             return msg
 
     class _Chatlog:
+
         def __init__(
             self,
-            debug: TextIOWrapper,
             window: Optional["_curses._CursesWindow"] = None,
             pad: Optional["_curses._CursesWindow"] = None,
         ) -> None:
-            self.debug = debug
-
             self.window = window
             self.pad = pad
             self.pad_start_row = 0
@@ -89,8 +89,10 @@ class TerminalDisplay:
             for user, message in self.messages:
                 self.draw_message(user, message)
 
-    def __init__(self, stdscr: "_curses._CursesWindow", file: TextIOWrapper) -> None:
-        self._log_file = file
+    def __init__(
+        self, stdscr: "_curses._CursesWindow", log_file: Optional[TextIOWrapper] = None
+    ) -> None:
+        self._log_file = log_file
         self._debug_mode = False
 
         self._set_resize_signal()
@@ -99,7 +101,7 @@ class TerminalDisplay:
         self.screen = stdscr
         self.finished = False
 
-        self.chatlog = self._Chatlog(file)
+        self.chatlog = self._Chatlog(log_file)
 
         # Colours used for debug purposes - find a better place for them.
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)
@@ -116,9 +118,9 @@ class TerminalDisplay:
         self._log(f"Initialised terminal display - {id(self)}")
 
     def _log(self, message: str) -> None:
-        # if self._debug_mode:
-        self._log_file.write(f"{message}\n")
-        self._log_file.flush()
+        if self._debug_mode and self._log_file:
+            self._log_file.write(f"{message}\n")
+            self._log_file.flush()
 
     def _set_resize_signal(self) -> None:
         def sig_handler(signal: int, frame: Optional[FrameType]) -> None:
@@ -179,7 +181,7 @@ class TerminalDisplay:
         self.screen.addstr(
             self.height - 1,
             0,
-            "f1: debug, esc: quit",
+            "f1: debug, q: quit",
             self.GREEN_ON_BLACK,
         )
 
@@ -241,34 +243,30 @@ class TerminalDisplay:
 
         self.chatlog.draw()
 
-    def run(self) -> None:
+    async def receive_messages(self, websocket: WebSocketClientProtocol) -> None:
+        async for message in websocket:
+            event = json.loads(message)
+            assert event["type"] == "chat"
+
+            self.chatlog.add_message("someone", event["message"])
+
+    async def send_message(self, websocket: WebSocketClientProtocol, msg: str) -> None:
+        event = {"type": "chat", "message": msg}
+        await websocket.send(json.dumps(event))
+
+    async def run(self, websocket: WebSocketClientProtocol) -> None:
         # Draw the display upon initial run
         self._draw_display()
 
-        char = None
-        rand_sentence = generate_sentences()
-        rand_user = generate_users()
-        while char != ord("q"):
-            if char == ord("m"):
-                self.chatlog.add_message(
-                    user=next(rand_user), message=next(rand_sentence)
-                )
-            elif char == ord("c"):
-                message = self.input_box.edit()
-                self.chatlog.add_message("you", message)
-
+        self.screen.nodelay(True)
+        while not self.finished:
             char = self.screen.getch()
-
-
-def main(stdscr: "_curses._CursesWindow") -> None:
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    with open(f"{dir_path}/debug.txt", mode="w+") as file:
-        display = TerminalDisplay(stdscr, file)
-        display.run()
-
-
-if __name__ == "__main__":
-    # remove default esc delay that comes with the wrapper
-    os.environ["ESCDELAY"] = "25"
-
-    curses.wrapper(main)
+            if char == ord("c"):
+                message = await asyncio.to_thread(self.input_box.edit)
+                await self.send_message(websocket, message)
+                self.chatlog.add_message("you", message)
+            elif char == ord("q"):
+                self.screen.clear()
+                self.screen.refresh()
+                self.finished = True
+            await asyncio.sleep(0)

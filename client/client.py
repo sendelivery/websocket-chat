@@ -6,6 +6,9 @@ from websockets import WebSocketClientProtocol
 import json
 import sys
 
+from ui import TerminalDisplay
+import curses
+
 
 async def receive_messages(websocket: WebSocketClientProtocol) -> None:
     async for message in websocket:
@@ -36,13 +39,24 @@ async def main():
         if roomid != "":
             event["roomid"] = roomid
         await websocket.send(json.dumps(event))
-        server_event = json.loads(await websocket.recv())
 
         # Wait for server join response
+        server_event = json.loads(await websocket.recv())
         assert server_event["type"] == "server_msg"
         print(server_event["message"])
-        await chat(websocket)
 
+        async def program(stdscr):
+            # Create UI
+            display = TerminalDisplay(stdscr)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+            # Run the program
+            tasks = (
+                asyncio.create_task(display.run(websocket)),
+                asyncio.create_task(display.receive_messages(websocket)),
+            )
+            await asyncio.wait(
+                tasks,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+        await curses.wrapper(program)

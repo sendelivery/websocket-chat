@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 
-from typing import Set
-
 import asyncio
 import websockets
 from websockets import WebSocketServerProtocol
 import json
 
-from chatrooms.room import Room
+from room.room import ServerRoom
 
 
-EXISTING_ROOMS: Set[Room] = {}
+EXISTING_ROOMS = {}
 
 
-async def chat(websocket: WebSocketServerProtocol, room: Room):
+async def chat(websocket: WebSocketServerProtocol, room: ServerRoom):
     async for message in websocket:
         event = json.loads(message)
         assert event["type"] == "chat"
@@ -23,13 +21,13 @@ async def chat(websocket: WebSocketServerProtocol, room: Room):
         websockets.broadcast(room.connected, message)
 
 
-async def join(websocket: WebSocketServerProtocol, roomid: str) -> Room:
+async def join(websocket: WebSocketServerProtocol, roomid: str) -> ServerRoom:
     # If our room already exists, we'll add our new user to its set of connections.
     # Otherwise, we'll create one.
     if roomid in EXISTING_ROOMS:
         room = EXISTING_ROOMS[roomid]
     else:
-        room = Room(roomid)
+        room = ServerRoom(roomid)
         EXISTING_ROOMS[roomid] = room
 
     room.connect(websocket)
@@ -60,11 +58,10 @@ async def handler(websocket: WebSocketServerProtocol):
     # a "leave" message, we'll remove their connection from the room.
     room.disconnect(websocket)
 
+    if len(room.connected) == 0:
+        EXISTING_ROOMS.pop(room.roomid)
+
 
 async def main():
     async with websockets.serve(handler, "", 8001):
         await asyncio.Future()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

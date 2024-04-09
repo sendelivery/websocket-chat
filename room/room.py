@@ -10,6 +10,7 @@ class Room:
     def __init__(self, roomid: str) -> None:
         self.roomid = roomid
         self.connected: Set[WebSocketServerProtocol] = set()
+        self.chatlog = []
 
     def connect(self, websocket: WebSocketServerProtocol) -> bool:
         if websocket in self.connected:
@@ -28,3 +29,11 @@ class Room:
 
         print(id(websocket), "is not in", self.roomid)
         return False
+
+    def _add_message(self, msg: str) -> None:
+        self.chatlog.append(msg)
+
+
+class ServerRoom(Room):
+    def __init__(self, roomid: str) -> None:
+        super().__init__(roomid)

@@ -6,7 +6,7 @@ from websockets import WebSocketClientProtocol
 import json
 import sys
 
-from ui import TerminalDisplay
+from .ui import TerminalDisplay
 import curses
 
 

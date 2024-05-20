@@ -8,7 +8,7 @@ from .ui import TerminalDisplay
 
 
 async def main():
-    uri = "ws://localhost:8001"
+    uri = "ws://localhost:8005"
     async with websockets.connect(uri) as websocket:
 
         username = ""
@@ -31,10 +31,11 @@ async def main():
 
         async def program(stdscr):
             # Create UI
-            display = TerminalDisplay(stdscr, client)
+            with open("debug.txt", "w+") as file:
+                display = TerminalDisplay(stdscr, client, file)
 
-            # Run the program
-            await display.run()
+                # Run the program
+                await display.run()
 
         await curses.wrapper(program)
 

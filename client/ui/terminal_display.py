@@ -4,7 +4,7 @@ import curses.textpad
 from io import TextIOWrapper
 import os
 import signal
-from typing import Optional, List
+from typing import Optional, List, Callable
 from types import FrameType
 
 import asyncio
@@ -24,15 +24,20 @@ class TerminalDisplay:
             textbox: curses.textpad.Textbox,
             width: int,
             height: int,
+            logger: Callable[[str], None],
         ) -> None:
             self.window = window
             self.textbox = textbox
             self.width = width
             self.height = height
+            self.logger = logger
 
         def edit(self) -> str:
             self.textbox.edit()
             msg = self.textbox.gather()
+
+            self.logger(f"typed: {msg}")
+
             msg = msg.replace("\n", "")
 
             self.window.clear()
@@ -71,13 +76,8 @@ class TerminalDisplay:
             self.draw_message(user, message)
 
         def draw_message(self, user: str, message: str) -> None:
-            if user == "you":
-                col = self.CYAN_ON_BLACK
-            else:
-                col = self.GREEN_ON_BLACK
-
             _, width = self.window.getmaxyx()
-            self.pad.addstr(f"{user}: ", col)
+            self.pad.addstr(f"{user}: ", self.GREEN_ON_BLACK)
             self.pad.addstr(f"{message}\n")
             self.pad.refresh(0, 0, 1, 1, self.pad_bottom, width)
 
@@ -124,9 +124,9 @@ class TerminalDisplay:
         self._log(f"Initialised terminal display - {id(self)}")
 
     def _log(self, message: str) -> None:
-        if self._debug_mode and self._log_file:
-            self._log_file.write(f"{message}\n")
-            self._log_file.flush()
+        # if self._debug_mode and self._log_file:
+        self._log_file.write(f"{message}\n")
+        self._log_file.flush()
 
     def _set_resize_signal(self) -> None:
         def sig_handler(signal: int, frame: Optional[FrameType]) -> None:
@@ -212,7 +212,9 @@ class TerminalDisplay:
 
         input_window.refresh()
 
-        return self._InputBox(input_window, textbox, input_width, input_height)
+        return self._InputBox(
+            input_window, textbox, input_width, input_height, self._log
+        )
 
     def _draw_chatlog_area(self) -> "_curses._CursesWindow":
         """A window with a pad that displays the last 100 messages in the chat log."""
@@ -253,6 +255,7 @@ class TerminalDisplay:
         self.screen.nodelay(True)
         while not self.finished:
             char = self.screen.getch()
+
             if char == ord("c"):
                 message = await asyncio.to_thread(self.input_box.edit)
                 await self.client.send_message(message)
@@ -261,6 +264,7 @@ class TerminalDisplay:
                 self.screen.clear()
                 self.screen.refresh()
                 self.finished = True
+
             await asyncio.sleep(0)
 
     async def receive_messages(self) -> None:

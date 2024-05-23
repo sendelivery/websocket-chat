@@ -21,7 +21,11 @@ class InfoPanel(u.WidgetWrap[u.ListBox]):
         infopile = u.Pile(infowidgets)
         div = u.Divider()
         join = u.Edit("Join a new room: ")
-        disconnect = u.Button("Disconnect")
+
+        def quit(_):
+            raise u.ExitMainLoop()
+
+        disconnect = u.Button("Disconnect", on_press=quit)
 
         self.walker = u.SimpleListWalker([infopile, div, join, div, disconnect])
         self.listbox = u.ListBox(self.walker)

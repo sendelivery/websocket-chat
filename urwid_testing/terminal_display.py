@@ -25,7 +25,7 @@ class TerminalDisplay:
             "selected",
         )
 
-        self.inputbox = InputBox()
+        self.inputbox = InputBox(self.chatlog.append_and_set_focus)
         self.inputbox_lb = u.AttrMap(
             u.LineBox(self.inputbox, title="Message", title_align="left"),
             "normal",

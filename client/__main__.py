@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import asyncio
-import curses
+import nest_asyncio
 import websockets
 from .client import Client
-from .ui import TerminalDisplay
+from .ui.urwid_ui import TerminalDisplay
 
 
 async def main():
@@ -29,15 +29,12 @@ async def main():
         assert server_event["type"] == "server_msg"
         # print(server_event["message"])
 
-        async def program(stdscr):
-            # Create UI
-            with open("debug.txt", "w+") as file:
-                display = TerminalDisplay(stdscr, client, file)
-
-                # Run the program
-                await display.run()
-
-        await curses.wrapper(program)
+        # Create and run UI
+        t = TerminalDisplay()
+        await t.run()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    nest_asyncio.apply()
+    with asyncio.Runner() as runner:
+        runner.run(main())

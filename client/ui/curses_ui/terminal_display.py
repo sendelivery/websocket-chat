@@ -9,7 +9,8 @@ from types import FrameType
 
 import asyncio
 
-from ..client import Client
+from ...client import Client
+
 
 def clamp(n: int, smallest: int, largest: int) -> int:
     return max(smallest, min(largest, n))

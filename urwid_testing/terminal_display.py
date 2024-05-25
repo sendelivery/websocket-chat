@@ -1,11 +1,22 @@
+import asyncio
+import nest_asyncio
 import urwid as u
 from urwid_testing.lib import Chatlog, InputBox, InfoPanel
+from urwid_testing.lib.dummy_text import dummy_text
+
+nest_asyncio.apply()
+
+
+async def handle_receive_message(callback, urwid_loop):
+    for m in dummy_text:
+        await asyncio.sleep(1)
+        callback(m)
+        urwid_loop.draw_screen()
 
 
 class DebugText(u.Text):
-    def __init__(
-        self,
-    ) -> None:
+
+    def __init__(self) -> None:
         super().__init__("Debug: ")
 
     def log(self, message: str) -> str:
@@ -15,7 +26,9 @@ class DebugText(u.Text):
 class TerminalDisplay:
     PALETTE = [("normal", "white", "black"), ("selected", "light cyan", "black")]
 
-    def __init__(self) -> None:
+    def __init__(self, event_loop: asyncio.AbstractEventLoop) -> None:
+        self.event_loop = event_loop
+
         self.debug = DebugText()
 
         self.chatlog = Chatlog(debug=self.debug)
@@ -57,12 +70,26 @@ class TerminalDisplay:
         if key in {"Q", "q"}:
             raise u.ExitMainLoop()
 
-    def run(self) -> None:
-        loop = u.MainLoop(
-            self.frame, palette=self.PALETTE, unhandled_input=self.exit_on_q
+    async def run(self) -> None:
+        urwid_asyncio_loop = u.AsyncioEventLoop(loop=asyncio.get_running_loop())
+
+        urwid_loop = u.MainLoop(
+            self.frame,
+            palette=self.PALETTE,
+            unhandled_input=self.exit_on_q,
+            event_loop=urwid_asyncio_loop,
         )
-        loop.run()
+
+        self.event_loop.create_task(
+            handle_receive_message(
+                callback=self.chatlog.append_and_set_focus, urwid_loop=urwid_loop
+            )
+        )
+
+        urwid_loop.run()
 
 
-t = TerminalDisplay()
-t.run()
+if __name__ == "__main__":
+    with asyncio.Runner() as runner:
+        t = TerminalDisplay(runner.get_loop())
+        runner.run(t.run())

@@ -1,6 +1,3 @@
-from typing import Generator
-
-
 dummy_text = [
     "Hello all, how are you all doing?",
     "This is great, a real life chat application!",
@@ -26,8 +23,3 @@ dummy_text = [
     "Hit me with your pet shark!",
     "The virus had powers none of us knew existed.",
 ]
-
-
-def generate_dummy_text() -> Generator[str, None, None]:
-    for text in dummy_text:
-        yield text

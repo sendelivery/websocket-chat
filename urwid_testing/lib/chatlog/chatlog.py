@@ -1,5 +1,4 @@
 import urwid as u
-from .dummy_text import generate_dummy_text
 
 
 class Chatlog(u.ListBox):
@@ -18,8 +17,6 @@ class Chatlog(u.ListBox):
 
         self.exit_focus = None
         self.walker, self.size = self.create_walker()
-
-        self.debug_text_generator = generate_dummy_text()
 
         super().__init__(body=self.walker)
 

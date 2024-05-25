@@ -1,3 +1,3 @@
-from .chatlog.chatlog import Chatlog, generate_dummy_text
+from .chatlog.chatlog import Chatlog
 from .inputbox.inputbox import InputBox
 from .infopanel.infopanel import InfoPanel

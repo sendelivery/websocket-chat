@@ -4,9 +4,12 @@ from typing import Callable
 
 class InputBox(u.Edit):
 
-    def __init__(self, on_enter: Callable[[str], None]) -> None:
+    def __init__(self, on_enter: Callable[[str], None] = lambda *args: None) -> None:
         self.on_enter = on_enter
         super().__init__()
+
+    def set_on_enter(self, callback: Callable[[str], None]) -> None:
+        self.on_enter = callback
 
     def keypress(self, size: tuple[int], key: str) -> str | None:
         if key != "enter":

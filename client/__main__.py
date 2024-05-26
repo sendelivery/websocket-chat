@@ -30,7 +30,7 @@ async def main():
         # print(server_event["message"])
 
         # Create and run UI
-        t = TerminalDisplay()
+        t = TerminalDisplay(client)
         await t.run()
 
 

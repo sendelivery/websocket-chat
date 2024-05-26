@@ -1,14 +1,7 @@
 import asyncio
 import urwid as u
 from client.ui.urwid_ui.lib import Chatlog, InputBox, InfoPanel
-from client.ui.urwid_ui.lib.dummy_text import dummy_text
-
-
-async def handle_receive_message(callback, urwid_loop):
-    for m in dummy_text:
-        await asyncio.sleep(1)
-        callback(m)
-        urwid_loop.draw_screen()
+from client.client.user import Client
 
 
 class DebugText(u.Text):
@@ -23,63 +16,67 @@ class DebugText(u.Text):
 class TerminalDisplay:
     PALETTE = [("normal", "white", "black"), ("selected", "light cyan", "black")]
 
-    def __init__(self) -> None:
+    def __init__(self, client: Client) -> None:
+        self.client = client
+        self.handle_receive_message = None
         self.debug = DebugText()
 
-        self.chatlog = Chatlog(debug=self.debug)
-        self.chatlog_lb = u.AttrMap(
+        self.chatlog = Chatlog()
+        chatlog_lb = u.AttrMap(
             u.LineBox(self.chatlog, title="Chatlog", title_align="left"),
             "normal",
             "selected",
         )
 
-        self.inputbox = InputBox(self.chatlog.append_and_set_focus)
-        self.inputbox_lb = u.AttrMap(
+        self.inputbox = InputBox()
+        inputbox_lb = u.AttrMap(
             u.LineBox(self.inputbox, title="Message", title_align="left"),
             "normal",
             "selected",
         )
 
-        self.pile = u.Pile(
-            [("weight", 3, self.chatlog_lb), ("weight", 1, self.inputbox_lb)]
-        )
-
-        # # Think of a cleaner solution to this, a focus map maybe?
-        # def return_to_inputbox() -> None:
-        #     self.pile._set_focus_position(1)
-
-        # self.chatlog.exit_focus = return_to_inputbox
+        pile = u.Pile([("weight", 3, chatlog_lb), ("weight", 1, inputbox_lb)])
 
         self.infopanel = InfoPanel()
-        self.infopanel_lb = u.AttrMap(
+        infopanel_lb = u.AttrMap(
             u.LineBox(self.infopanel, title="Information", title_align="left"),
             "normal",
             "selected",
         )
 
-        self.columns = u.Columns([("weight", 2, self.pile), self.infopanel_lb])
+        columns = u.Columns([("weight", 2, pile), infopanel_lb])
 
-        self.frame = u.Frame(self.columns, footer=self.debug)
-
-    def exit_on_q(self, key: str) -> None:
-        if key in {"Q", "q"}:
-            raise u.ExitMainLoop()
+        self.frame = u.Frame(columns, footer=self.debug)
 
     async def run(self) -> None:
+
+        def exit_on_q(key: str) -> None:
+            if key in {"esc"}:
+                raise u.ExitMainLoop()
+
         event_loop = asyncio.get_running_loop()
         urwid_asyncio_loop = u.AsyncioEventLoop(loop=event_loop)
 
-        urwid_loop = u.MainLoop(
+        self.urwid_loop = u.MainLoop(
             self.frame,
             palette=self.PALETTE,
-            unhandled_input=self.exit_on_q,
+            unhandled_input=exit_on_q,
             event_loop=urwid_asyncio_loop,
         )
 
+        # Behaviour for sending messages on inputbox 'enter'
+        def handle_on_enter(message: str) -> None:
+            event_loop.create_task(self.client.send_message(message))
+
+        self.inputbox.set_on_enter(handle_on_enter)
+
+        # Behaviour for displaying messages on client receipt
+        def handle_receive_message(m: str):
+            self.chatlog.append_and_set_focus(m)
+            self.urwid_loop.draw_screen()
+
         event_loop.create_task(
-            handle_receive_message(
-                callback=self.chatlog.append_and_set_focus, urwid_loop=urwid_loop
-            )
+            self.client.receive_messages(callback=handle_receive_message)
         )
 
-        urwid_loop.run()
+        self.urwid_loop.run()

@@ -14,6 +14,12 @@ class DebugText(u.Text):
 
 
 class TerminalDisplay:
+
+    class LineBoxDecoration(u.AttrMap):
+        def __init__(self, w: u.Widget, title: str = "") -> None:
+            lb = u.LineBox(w, title, title_align="left")
+            super().__init__(lb, "normal", "selected")
+
     PALETTE = [("normal", "white", "black"), ("selected", "light cyan", "black")]
 
     def __init__(self, client: Client) -> None:
@@ -22,27 +28,15 @@ class TerminalDisplay:
         self.debug = DebugText()
 
         self.chatlog = Chatlog()
-        chatlog_lb = u.AttrMap(
-            u.LineBox(self.chatlog, title="Chatlog", title_align="left"),
-            "normal",
-            "selected",
-        )
+        chatlog_lb = self.LineBoxDecoration(self.chatlog, "Chatlog")
 
         self.inputbox = InputBox()
-        inputbox_lb = u.AttrMap(
-            u.LineBox(self.inputbox, title="Message", title_align="left"),
-            "normal",
-            "selected",
-        )
+        inputbox_lb = self.LineBoxDecoration(self.inputbox, "Message")
 
         pile = u.Pile([("weight", 3, chatlog_lb), ("weight", 1, inputbox_lb)])
 
         self.infopanel = InfoPanel()
-        infopanel_lb = u.AttrMap(
-            u.LineBox(self.infopanel, title="Information", title_align="left"),
-            "normal",
-            "selected",
-        )
+        infopanel_lb = self.LineBoxDecoration(self.infopanel, "Information")
 
         columns = u.Columns([("weight", 2, pile), infopanel_lb])
 

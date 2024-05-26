@@ -3,7 +3,7 @@
 import asyncio
 import nest_asyncio
 import websockets
-from .client import Client
+from .client import Client, get_random_name
 from .ui.urwid_ui import TerminalDisplay
 
 
@@ -11,13 +11,13 @@ async def main():
     uri = "ws://localhost:8005"
     async with websockets.connect(uri) as websocket:
 
-        username = ""
-        while username == "":
-            username = input("What is your name: ").strip()
+        username = input("What is your name? (Empty for random) ").strip()
+        if username == "":
+            username = get_random_name()
 
         client = Client(username, websocket)
 
-        roomid = input("Which room would you like to join? (Empty for random) ")
+        roomid = input("Which room would you like to join? (Empty for random) ").strip()
         if roomid == "":
             roomid = "RANDOM"
 

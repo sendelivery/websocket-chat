@@ -20,7 +20,11 @@ class TerminalDisplay:
             lb = u.LineBox(w, title, title_align="left")
             super().__init__(lb, "normal", "selected")
 
-    PALETTE = [("normal", "white", "black"), ("selected", "light cyan", "black")]
+    PALETTE = [
+        ("normal", "white", ""),
+        ("selected", "light cyan", ""),
+        ("heading", "white", "", "bold"),
+    ]
 
     def __init__(self, client: Client) -> None:
         self.client = client
@@ -40,7 +44,14 @@ class TerminalDisplay:
 
         columns = u.Columns([("weight", 2, pile), infopanel_lb])
 
-        self.frame = u.Frame(columns, footer=self.debug)
+        header = u.AttrMap(
+            u.Text("Websocket Chat by sendelivery", align="center"), "heading"
+        )
+        footer = u.AttrMap(
+            u.Text(f"Connected as {client.username}", align="left"), "heading"
+        )
+
+        self.frame = u.Frame(columns, header=header, footer=footer)
 
     async def run(self) -> None:
 

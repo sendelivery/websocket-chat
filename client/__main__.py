@@ -3,8 +3,9 @@
 import asyncio
 import nest_asyncio
 import websockets
-from .client import Client, get_random_name
-from .ui.urwid_ui import TerminalDisplay
+from .client import Client
+from .lib import get_random_name
+from .lib.ui import TerminalDisplay
 
 
 async def main():

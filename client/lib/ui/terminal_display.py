@@ -1,7 +1,7 @@
 import asyncio
 import urwid as u
-from client.ui.urwid_ui.lib import Chatlog, InputBox, InfoPanel
-from client.client.user import Client
+from .lib import Chatlog, InputBox, InfoPanel
+from client.client import Client
 
 
 class DebugText(u.Text):

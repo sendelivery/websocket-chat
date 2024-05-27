@@ -19,23 +19,28 @@ schema = {
 
 
 class Client:
+
     def __init__(self, username: str, websocket: WebSocketClientProtocol) -> None:
         self.username = username
+        self.roomid = ""
         self.websocket = websocket
 
     def __repr__(self) -> str:
         return self.username
+
+    def set_roomid(self, roomid: str) -> None:
+        self.roomid = roomid
 
     async def receive_event(self) -> Dict:
         server_event = json.loads(await self.websocket.recv())
         validate(server_event, schema)
         return server_event
 
-    async def receive_messages(self, callback: Callable[[str], None]) -> None:
+    async def receive_messages(self, callback: Callable[[Dict], None]) -> None:
         async for message in self.websocket:
             event = json.loads(message)
             assert event["type"] == "chat"
-            callback(event["message"])
+            callback(event)
 
     async def send_event(self, event: Dict) -> None:
         validate(event, schema)

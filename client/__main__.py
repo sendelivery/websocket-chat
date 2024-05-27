@@ -28,7 +28,8 @@ async def main():
         # Wait for server join response
         server_event = await client.receive_event()
         assert server_event["type"] == "server_msg"
-        # print(server_event["message"])
+
+        client.set_roomid(roomid)
 
         # Create and run UI
         t = TerminalDisplay(client)

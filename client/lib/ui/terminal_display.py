@@ -1,4 +1,5 @@
 import asyncio
+from typing import Dict
 import urwid as u
 from .lib import Chatlog, InputBox, InfoPanel
 from client.client import Client
@@ -21,9 +22,11 @@ class TerminalDisplay:
             super().__init__(lb, "normal", "selected")
 
     PALETTE = [
-        ("normal", "white", ""),
-        ("selected", "light cyan", ""),
+        ("normal", "light gray", ""),
+        ("selected", "white", "", "bold"),
         ("heading", "white", "", "bold"),
+        ("user_highlight", "light green", ""),
+        ("self_highlight", "light red", "", "underline"),
     ]
 
     def __init__(self, client: Client) -> None:
@@ -39,7 +42,7 @@ class TerminalDisplay:
 
         pile = u.Pile([("weight", 3, chatlog_lb), ("weight", 1, inputbox_lb)])
 
-        self.infopanel = InfoPanel()
+        self.infopanel = InfoPanel(room=client.roomid)
         infopanel_lb = self.LineBoxDecoration(self.infopanel, "Information")
 
         columns = u.Columns([("weight", 2, pile), infopanel_lb])
@@ -76,8 +79,14 @@ class TerminalDisplay:
         self.inputbox.set_on_enter(handle_on_enter)
 
         # Behaviour for displaying messages on client receipt
-        def handle_receive_message(m: str):
-            self.chatlog.append_and_set_focus(m)
+        def handle_receive_message(event: Dict):
+            highlight = "user_highlight"
+            if event["user"] == self.client.username:
+                highlight = "self_highlight"
+
+            self.chatlog.append_and_set_focus(
+                event["user"], event["message"], highlight
+            )
             self.urwid_loop.draw_screen()
 
         event_loop.create_task(

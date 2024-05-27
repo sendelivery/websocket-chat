@@ -21,10 +21,11 @@ class Chatlog(u.ListBox):
 
         super().__init__(body=self.walker)
 
-    def append(self, message: str) -> None:
-        self.walker.append(u.Text(message))
+    def append(self, user: str, message: str, attr: str) -> None:
+        text_content = [(attr, user), f": {message}"]
+        self.walker.append(u.Text(text_content))
         self.size += 1
 
-    def append_and_set_focus(self, message: str) -> None:
-        self.append(message)
+    def append_and_set_focus(self, user: str, message: str, attr: str) -> None:
+        self.append(user, message, attr)
         self.walker.set_focus(self.size - 1)

@@ -5,23 +5,13 @@ import websockets
 from websockets import WebSocketServerProtocol
 import json
 
-from room.room import ServerRoom
+from .lib import ServerClient, ServerRoom
 
 
 EXISTING_ROOMS = {}
 
 
-async def chat(websocket: WebSocketServerProtocol, room: ServerRoom):
-    async for message in websocket:
-        event = json.loads(message)
-        assert event["type"] == "chat"
-
-        print("received", event["message"])
-
-        websockets.broadcast(room.connected, message)
-
-
-async def join(websocket: WebSocketServerProtocol, roomid: str) -> ServerRoom:
+async def join_or_create_room(server_client: ServerClient, roomid: str) -> ServerRoom:
     # If our room already exists, we'll add our new user to its set of connections.
     # Otherwise, we'll create one.
     if roomid in EXISTING_ROOMS:
@@ -30,12 +20,12 @@ async def join(websocket: WebSocketServerProtocol, roomid: str) -> ServerRoom:
         room = ServerRoom(roomid)
         EXISTING_ROOMS[roomid] = room
 
-    room.connect(websocket)
+    room.subscribe(server_client)
     event = {
         "type": "server_msg",
         "message": f"Joined {roomid} - {len(room.connected) - 1} other user(s) online.",
     }
-    await websocket.send(json.dumps(event))
+    await server_client.websocket.send(json.dumps(event))
     return room
 
 
@@ -47,16 +37,17 @@ async def handler(websocket: WebSocketServerProtocol):
     event = json.loads(message)
 
     assert event["type"] == "join"
+    assert event["roomid"]
+    assert event["username"]
 
-    if "roomid" in event:
-        room = await join(websocket, event["roomid"])
-        await chat(websocket, room)
-    else:
-        raise NotImplementedError("Unable to join random room at this time.")
+    server_client = ServerClient(event["username"], websocket)
+
+    room = await join_or_create_room(server_client, event["roomid"])
+    await room.chat(server_client)
 
     # When the client disconnects, either by terminating their end of the connection or by sending
     # a "leave" message, we'll remove their connection from the room.
-    room.disconnect(websocket)
+    room.unsubscribe(server_client)
 
     if len(room.connected) == 0:
         EXISTING_ROOMS.pop(room.roomid)

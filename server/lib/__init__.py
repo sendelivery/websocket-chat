@@ -1,2 +1,1 @@
-from .server_client import ServerClient
-from .room import ServerRoom
+from .chat_client import ChatClient

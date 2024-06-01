@@ -4,29 +4,16 @@ import asyncio
 import websockets
 from websockets import WebSocketServerProtocol
 import json
-
-from .lib import ServerClient, ServerRoom
-
-
-EXISTING_ROOMS = {}
+from .lib import ChatClient
 
 
-async def join_or_create_room(server_client: ServerClient, roomid: str) -> ServerRoom:
-    # If our room already exists, we'll add our new user to its set of connections.
-    # Otherwise, we'll create one.
-    if roomid in EXISTING_ROOMS:
-        room = EXISTING_ROOMS[roomid]
-    else:
-        room = ServerRoom(roomid)
-        EXISTING_ROOMS[roomid] = room
-
-    room.subscribe(server_client)
+async def subscribe_to_channel(chat_client: ChatClient, roomid: str) -> None:
     event = {
         "type": "server_msg",
-        "message": f"Joined {roomid} - {len(room.connected) - 1} other user(s) online.",
+        "message": f"Joined {roomid}",
     }
-    await server_client.websocket.send(json.dumps(event))
-    return room
+    chat_client.subscribe(roomid)
+    await chat_client.websocket.send(json.dumps(event))
 
 
 async def handler(websocket: WebSocketServerProtocol):
@@ -40,17 +27,15 @@ async def handler(websocket: WebSocketServerProtocol):
     assert event["roomid"]
     assert event["username"]
 
-    server_client = ServerClient(event["username"], websocket)
+    chat_client = ChatClient(event["username"], websocket)
 
-    room = await join_or_create_room(server_client, event["roomid"])
-    await room.chat(server_client)
+    await subscribe_to_channel(chat_client, event["roomid"])
+
+    await asyncio.gather(chat_client.handle_messages(), chat_client.receive_message())
 
     # When the client disconnects, either by terminating their end of the connection or by sending
     # a "leave" message, we'll remove their connection from the room.
-    room.unsubscribe(server_client)
-
-    if len(room.connected) == 0:
-        EXISTING_ROOMS.pop(room.roomid)
+    chat_client.unsubscribe()
 
 
 async def main():

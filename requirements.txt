@@ -1,8 +1,13 @@
 attrs==23.2.0
 hiredis==2.3.2
+iniconfig==2.0.0
 jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
 nest-asyncio==1.6.0
+packaging==24.0
+pluggy==1.5.0
+pytest==8.2.1
+pytest-asyncio==0.23.7
 redis==5.0.4
 referencing==0.34.0
 rpds-py==0.18.0

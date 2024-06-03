@@ -5,7 +5,7 @@ import nest_asyncio
 import websockets
 from .client import Client
 from .lib import get_random_name
-from .lib.ui import TerminalDisplay
+from .lib.ui import ConsoleDisplay
 
 
 async def main():
@@ -32,8 +32,8 @@ async def main():
         client.set_roomid(roomid)
 
         # Create and run UI
-        t = TerminalDisplay(client)
-        await t.run()
+        display = ConsoleDisplay(client)
+        await display.run()
 
 
 if __name__ == "__main__":

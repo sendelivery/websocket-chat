@@ -5,16 +5,7 @@ from .lib import Chatlog, InputBox, InfoPanel
 from client.client import Client
 
 
-class DebugText(u.Text):
-
-    def __init__(self) -> None:
-        super().__init__("Debug: ")
-
-    def log(self, message: str) -> str:
-        self.set_text(f"Debug: {message}")
-
-
-class TerminalDisplay:
+class ConsoleDisplay:
 
     class LineBoxDecoration(u.AttrMap):
         def __init__(self, w: u.Widget, title: str = "") -> None:
@@ -31,8 +22,6 @@ class TerminalDisplay:
 
     def __init__(self, client: Client) -> None:
         self.client = client
-        self.handle_receive_message = None
-        self.debug = DebugText()
 
         self.chatlog = Chatlog()
         chatlog_lb = self.LineBoxDecoration(self.chatlog, "Chatlog")
@@ -58,7 +47,7 @@ class TerminalDisplay:
 
     async def run(self) -> None:
 
-        def exit_on_q(key: str) -> None:
+        def exit_on_esc(key: str) -> None:
             if key in {"esc"}:
                 raise u.ExitMainLoop()
 
@@ -68,7 +57,7 @@ class TerminalDisplay:
         self.urwid_loop = u.MainLoop(
             self.frame,
             palette=self.PALETTE,
-            unhandled_input=exit_on_q,
+            unhandled_input=exit_on_esc,
             event_loop=urwid_asyncio_loop,
         )
 
@@ -90,7 +79,7 @@ class TerminalDisplay:
             self.urwid_loop.draw_screen()
 
         event_loop.create_task(
-            self.client.receive_messages(callback=handle_receive_message)
+            self.client.handle_messages(callback=handle_receive_message)
         )
 
         self.urwid_loop.run()

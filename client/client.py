@@ -36,7 +36,7 @@ class Client:
         validate(server_event, schema)
         return server_event
 
-    async def receive_messages(self, callback: Callable[[Dict], None]) -> None:
+    async def handle_messages(self, callback: Callable[[Dict], None]) -> None:
         async for message in self.websocket:
             event = json.loads(message)
             assert event["type"] == "chat"

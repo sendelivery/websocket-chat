@@ -16,7 +16,7 @@ def mock_client():
 # The pytest-asyncio plugin facilitates testing of code that uses the asyncio
 # library. We'll set it to apply to the entire test class for simplicity.
 @pytest.mark.asyncio(scope="class")
-class TestClass:
+class TestConsoleDisplay:
 
     # Most tests in this class patch the urwid MainLoop class to prevent urwid hijacking our
     # terminal. However, we need some of its functionality depending on the test, so we won't

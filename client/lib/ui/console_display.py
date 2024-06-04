@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict
 import urwid as u
-from .lib import Chatlog, InputBox, InfoPanel
+from .custom_widgets import Chatlog, InputBox, InfoPanel
 from client.client import Client
 
 

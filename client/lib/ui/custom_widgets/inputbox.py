@@ -18,7 +18,7 @@ class InputBox(u.Edit):
             edit_text = self.get_edit_text()
 
             try:
-                self.validate(edit_text)
+                self._validate(edit_text)
             except ValueError:
                 return
 
@@ -26,6 +26,6 @@ class InputBox(u.Edit):
             self.set_edit_text("")
             return
 
-    def validate(self, edit_text: str) -> None:
+    def _validate(self, edit_text: str) -> None:
         if edit_text == "":
             raise ValueError("Empty edit text.")

@@ -1,5 +1,6 @@
 import urwid as u
 from typing import Iterable
+
 # from collections import defaultdict
 
 
@@ -27,7 +28,7 @@ class InfoPanel(u.WidgetWrap[u.ListBox]):
         def quit(_):
             raise u.ExitMainLoop()
 
-        disconnect = u.Button("Disconnect", on_press=quit)
+        self.disconnect = u.Button("Disconnect", on_press=quit)
 
         self.walker = u.SimpleListWalker(
             [
@@ -35,7 +36,7 @@ class InfoPanel(u.WidgetWrap[u.ListBox]):
                 div,
                 # join,
                 # div,
-                disconnect,
+                self.disconnect,
             ]
         )
         self.listbox = u.ListBox(self.walker)

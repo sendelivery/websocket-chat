@@ -26,7 +26,7 @@ async def main():
         await client.send_event(event)
 
         # Wait for server join response
-        server_event = await client.receive_event()
+        server_event = await client.receive_server_event()
         assert server_event["type"] == "server_msg"
 
         client.set_roomid(roomid)

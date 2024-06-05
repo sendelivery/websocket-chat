@@ -69,7 +69,9 @@ class TestConsoleDisplay:
             pass
 
         coro = dummy_coroutine()
-        monkeypatch.setattr(mock_client, "handle_messages", lambda callback: coro)
+        monkeypatch.setattr(
+            mock_client, "handle_incoming_messages", lambda callback: coro
+        )
 
         # When we initialise and run our console display
         display = ConsoleDisplay(mock_client)
@@ -109,7 +111,7 @@ class TestConsoleDisplay:
         loop.create_task.assert_called_with(coro)
 
     @patch("client.lib.ui.console_display.u.MainLoop.run")
-    async def test_can_exit_display_with_esc(self, _, monkeypatch, mock_client):
+    async def test_can_exit_display_with_esc(self, _, mock_client):
         display = ConsoleDisplay(mock_client)
 
         await display.run()

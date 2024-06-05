@@ -79,7 +79,7 @@ class ConsoleDisplay:
             self.urwid_loop.draw_screen()
 
         event_loop.create_task(
-            self.client.handle_messages(callback=handle_receive_message)
+            self.client.handle_incoming_messages(callback=handle_receive_message)
         )
 
         self.urwid_loop.run()

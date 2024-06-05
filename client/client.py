@@ -31,12 +31,12 @@ class Client:
     def set_roomid(self, roomid: str) -> None:
         self.roomid = roomid
 
-    async def receive_event(self) -> Dict:
+    async def receive_server_event(self) -> Dict:
         server_event = json.loads(await self.websocket.recv())
         validate(server_event, schema)
         return server_event
 
-    async def handle_messages(self, callback: Callable[[Dict], None]) -> None:
+    async def handle_incoming_messages(self, callback: Callable[[Dict], None]) -> None:
         async for message in self.websocket:
             event = json.loads(message)
             assert event["type"] == "chat"

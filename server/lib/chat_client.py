@@ -24,7 +24,7 @@ class ChatClient:
         self._pubsub.unsubscribe()
         self.roomid = None
 
-    async def handle_messages(self):
+    async def publish_messages(self):
         async for message in self.websocket:
             event = json.loads(message)
             assert event["type"] == "chat"

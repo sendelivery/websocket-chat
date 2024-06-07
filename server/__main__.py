@@ -31,7 +31,7 @@ async def handler(websocket: WebSocketServerProtocol):
 
     await subscribe_to_channel(chat_client, event["roomid"])
 
-    await asyncio.gather(chat_client.handle_messages(), chat_client.receive_message())
+    await asyncio.gather(chat_client.publish_messages(), chat_client.receive_message())
 
     # When the client disconnects, either by terminating their end of the connection or by sending
     # a "leave" message, we'll remove their connection from the room.

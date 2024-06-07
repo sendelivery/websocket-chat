@@ -45,6 +45,15 @@ class ConsoleDisplay:
 
         self.frame = u.Frame(columns, header=header, footer=footer)
 
+    def _handle_receive_message(self, event: Dict):
+        """Behaviour for displaying messages on client receipt"""
+        highlight = "user_highlight"
+        if event["user"] == self.client.username:
+            highlight = "self_highlight"
+
+        self.chatlog.append_and_set_focus(event["user"], event["message"], highlight)
+        self.urwid_loop.draw_screen()
+
     async def run(self) -> None:
 
         def exit_on_esc(key: str) -> None:
@@ -67,19 +76,8 @@ class ConsoleDisplay:
 
         self.inputbox.set_on_enter(handle_on_enter)
 
-        # Behaviour for displaying messages on client receipt
-        def handle_receive_message(event: Dict):
-            highlight = "user_highlight"
-            if event["user"] == self.client.username:
-                highlight = "self_highlight"
-
-            self.chatlog.append_and_set_focus(
-                event["user"], event["message"], highlight
-            )
-            self.urwid_loop.draw_screen()
-
         event_loop.create_task(
-            self.client.handle_incoming_messages(callback=handle_receive_message)
+            self.client.handle_incoming_messages(callback=self._handle_receive_message)
         )
 
         self.urwid_loop.run()

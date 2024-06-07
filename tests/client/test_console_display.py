@@ -63,37 +63,65 @@ class TestConsoleDisplay:
     @patch("client.lib.ui.console_display.u.MainLoop")
     @patch("client.lib.ui.console_display.asyncio.get_running_loop")
     async def test_creates_a_task_to_handle_incoming_messages(
-        self, mocked_get_running_loop, _, monkeypatch, mock_client
+        self, mocked_get_running_loop, _, mock_client, monkeypatch
     ):
-        async def dummy_coroutine():
-            pass
+        dummy_event = {"user": "MOCK_USERNAME", "message": "Hello!"}
 
-        coro = dummy_coroutine()
         monkeypatch.setattr(
-            mock_client, "handle_incoming_messages", lambda callback: coro
+            mock_client,
+            "handle_incoming_messages",
+            lambda callback: callback(dummy_event),
         )
 
         # When we initialise and run our console display
         display = ConsoleDisplay(mock_client)
         await display.run()
 
-        # Then we want the display to have created a task for handling incoming messages.
         loop = mocked_get_running_loop.return_value
 
+        # Then we want the display to have created a task for handling incoming messages.
+        # Using the expected callback.
         assert mocked_get_running_loop.call_count == 1
         assert loop.create_task.call_count == 1
-        loop.create_task.assert_called_with(coro)
+        loop.create_task.assert_called_with(
+            mock_client.handle_incoming_messages(display._handle_receive_message)
+        )
+
+    @patch("client.lib.ui.console_display.u.MainLoop")
+    @patch("client.lib.ui.console_display.Chatlog", autospec=True)
+    async def test_incoming_messages_are_added_to_the_chatlog(
+        self, mock_chatlog, mock_urwid_loop, mock_client, monkeypatch
+    ):
+        # Given a console display instance and a few events
+        display = ConsoleDisplay(mock_client)
+        await display.run()
+
+        self_event = {"user": mock_client.username, "message": "Hello!"}
+        user_event = {"user": "SOMEONE_ELSE", "message": "Hello to you too!"}
+
+        log = mock_chatlog.return_value
+
+        # When a new message gets sent to our handler
+        display._handle_receive_message(self_event)
+        assert log.append_and_set_focus.call_count == 1
+        log.append_and_set_focus.assert_called_with(
+            self_event["user"], self_event["message"], "self_highlight"
+        )
+
+        display._handle_receive_message(user_event)
+        assert log.append_and_set_focus.call_count == 2
+        log.append_and_set_focus.assert_called_with(
+            user_event["user"], user_event["message"], "user_highlight"
+        )
+
+        assert mock_urwid_loop.return_value.draw_screen.call_count == 2
 
     @patch("client.lib.ui.console_display.u.MainLoop")
     @patch("client.lib.ui.console_display.asyncio.get_running_loop")
     async def test_correctly_calls_client_send_message(
         self, mocked_get_running_loop, _, monkeypatch, mock_client
     ):
-        async def dummy_coroutine():
-            pass
-
-        coro = dummy_coroutine()
-        monkeypatch.setattr(mock_client, "send_message", lambda message: coro)
+        mock_client.send_message = lambda *_: "Sent!"
 
         # When we initialise and run our console display
         display = ConsoleDisplay(mock_client)
@@ -108,7 +136,7 @@ class TestConsoleDisplay:
 
         assert mocked_get_running_loop.call_count == 1
         assert loop.create_task.call_count == 2
-        loop.create_task.assert_called_with(coro)
+        loop.create_task.assert_called_with(mock_client.send_message())
 
     @patch("client.lib.ui.console_display.u.MainLoop.run")
     async def test_can_exit_display_with_esc(self, _, mock_client):

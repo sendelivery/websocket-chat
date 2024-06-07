@@ -14,7 +14,8 @@ def mock_websocket():
 
 @pytest.mark.asyncio(scope="class")
 class TestClientClass:
-    async def test_correctly_sets_properties(self, mock_websocket):
+
+    async def test_has_expected_properties(self, mock_websocket):
         # Given
         client = Client("MOCK_USERNAME", mock_websocket)
 
@@ -25,6 +26,7 @@ class TestClientClass:
         assert client.username == "MOCK_USERNAME"
         assert client.roomid == "MOCK_ROOMID"
         assert client.websocket == mock_websocket
+        assert str(client) == client.username
 
     async def test_can_receive_server_events(self, mock_websocket):
         # Given

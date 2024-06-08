@@ -2,7 +2,7 @@
 
 Chat with your friends (provided you're all using the same computer) using a slick console interface!
 
-![Screenshot of the console user interface](docs/assets/screenshot.png)
+![Screenshot of the console user interface](.docs/assets/screenshot.png)
 
 ## Getting Started
 

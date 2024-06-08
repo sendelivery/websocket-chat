@@ -1,7 +1,6 @@
 .venv
 __pycache__
-
 # holds tests files used during development
 dev
-
 debug.txt
+.coverage

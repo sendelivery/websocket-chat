@@ -1,1 +1,1 @@
-from .terminal_display import TerminalDisplay
+from .console_display import ConsoleDisplay

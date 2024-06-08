@@ -9,6 +9,7 @@ from .lib import ChatClient
 HOST = ""
 PORT = 8005
 
+
 async def subscribe_to_channel(chat_client: ChatClient, roomid: str) -> None:
     event = {
         "type": "server_msg",

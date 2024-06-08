@@ -29,18 +29,18 @@ class ChatClient:
             event = json.loads(message)
             assert event["type"] == "chat"
 
-            print(f"Received chat event: {json.dumps({ "user": event["user"], "message": event["message"] })}")
+            print(f"Received chat event: {json.dumps({"user": event["user"], "message": event["message"]})}")
 
             self._redis.publish(self.roomid, json.dumps(event))
-            
+
     async def poll_messages(self):
         while True:
             message = self._pubsub.get_message()
-            
+
             if message is not None:
                 assert message["type"] == "message"
                 event = json.loads(message["data"])
-                
+
                 await self.websocket.send(json.dumps(event))
-                
+
             await asyncio.sleep(0)

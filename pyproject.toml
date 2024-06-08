@@ -1,6 +1,6 @@
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --cov-report term-missing --cov=client --cov=server"
+addopts = "-ra -q --cov-report term-missing --cov=client --cov=server --cov-fail-under=95"
 testpaths = [
     "tests",
 ]

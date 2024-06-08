@@ -8,6 +8,7 @@ Chat with your friends (provided you're all using the same computer) using a sli
 
 ### Requirements
 - Python 3.12 or greater
+- [Redis Stack](https://redis.io/docs/latest/operate/oss_and_stack/install/install-stack/) running on `localhost:6379`
 
 ### Installation
 This project uses the venv module to manage virtual environments and pip for dependency management.
@@ -23,6 +24,8 @@ pip install -r requirements.txt
 Once all dependencies have been installed, you can start a local server or join a local server as a client.
 
 ### Start a local server
+
+> Make sure Redis Stack is running on `localhost:6379`.
 
 ```sh
 python -m server

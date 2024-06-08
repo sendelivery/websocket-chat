@@ -6,6 +6,8 @@ from websockets import WebSocketServerProtocol
 import json
 from .lib import ChatClient
 
+HOST = ""
+PORT = 8005
 
 async def subscribe_to_channel(chat_client: ChatClient, roomid: str) -> None:
     event = {
@@ -31,17 +33,21 @@ async def handler(websocket: WebSocketServerProtocol):
 
     await subscribe_to_channel(chat_client, event["roomid"])
 
-    await asyncio.gather(chat_client.publish_messages(), chat_client.receive_message())
+    await asyncio.gather(chat_client.publish_messages(), chat_client.poll_messages())
 
     # When the client disconnects, either by terminating their end of the connection or by sending
     # a "leave" message, we'll remove their connection from the room.
     chat_client.unsubscribe()
 
 
-async def main():
-    async with websockets.serve(handler, "", 8005):
+async def start_server():
+    async with websockets.serve(handler, HOST, PORT):
         await asyncio.Future()
 
 
+def main():
+    asyncio.run(start_server())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

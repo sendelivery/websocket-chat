@@ -33,7 +33,7 @@ class ChatClient:
 
             self._redis.publish(self.roomid, json.dumps(event))
             
-    async def receive_message(self):
+    async def poll_messages(self):
         while True:
             message = self._pubsub.get_message()
             

@@ -119,7 +119,7 @@ class TestConsoleDisplay:
     @patch("client.lib.ui.console_display.u.MainLoop")
     @patch("client.lib.ui.console_display.asyncio.get_running_loop")
     async def test_correctly_calls_client_send_message(
-        self, mocked_get_running_loop, _, monkeypatch, mock_client
+        self, mocked_get_running_loop, _, mock_client
     ):
         mock_client.send_message = lambda *_: "Sent!"
 

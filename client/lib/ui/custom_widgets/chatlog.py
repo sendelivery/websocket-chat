@@ -1,30 +1,21 @@
 import urwid as u
+from .deque_walker import DequeWalker
 
 
 class Chatlog(u.ListBox):
-
-    # TODO
-    # Nested class that handles the creation and destruction of individual message text widgets
-    # https://urwid.org/manual/widgets.html#list-walkers
-    # If you need to display a large number of widgets you should implement your own list
-    # walker that manages creating widgets as they are requested and destroying them later to
-    # avoid excessive memory use.
-    class ChatlogWalker(u.SimpleListWalker):
-        def __init__(self) -> None:
-            # Always start with no chat history (empty contents), and wrap_around set to False.
-            super().__init__(contents=[], wrap_around=False)
-
     def __init__(self) -> None:
         self.exit_focus = None
-        self.walker = self.ChatlogWalker()
-        self.size = 0
+        self.walker = DequeWalker(wrap_around=False)
 
         super().__init__(body=self.walker)
+
+    @property
+    def size(self) -> int:
+        return len(self.walker.contents)
 
     def append(self, user: str, message: str, attr: str) -> None:
         text_content = [(attr, user), f": {message}"]
         self.walker.append(u.Text(text_content))
-        self.size += 1
 
     def append_and_set_focus(self, user: str, message: str, attr: str) -> None:
         self.append(user, message, attr)

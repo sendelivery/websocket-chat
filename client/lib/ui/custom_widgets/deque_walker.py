@@ -39,11 +39,6 @@ class DequeWalker(deque, u.ListWalker):
     def contents(self) -> Self:
         return self
 
-    # def _modified(self) -> None:
-    #     if self.focus >= len(self):
-    #         self.focus = max(0, len(self) - 1)
-    #     super()._modified(self)
-
     def set_focus(self, position: int) -> None:
         """Set focus position."""
 
@@ -72,11 +67,3 @@ class DequeWalker(deque, u.ListWalker):
                 return len(self) - 1
             raise IndexError
         return position - 1
-
-    # def positions(self, reverse: bool = False) -> Iterable[int]:
-    #     """
-    #     Optional method for returning an iterable of positions.
-    #     """
-    #     if reverse:
-    #         return range(len(self) - 1, -1, -1)
-    #     return range(len(self))
